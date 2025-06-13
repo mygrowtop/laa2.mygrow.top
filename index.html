@@ -44,7 +44,7 @@
                     'other': { 'en': 'Other Games', 'zh': '其他游戏' }
                 };
                 
-                let langValue = localStorage.getItem('language') || 'zh';
+                let langValue = localStorage.getItem('language') || 'en';
                 
                 // 如果有对应的翻译，返回翻译后的标题
                 if (titles[category] && titles[category][langValue]) {
@@ -157,7 +157,7 @@
             <!-- 添加语言切换按钮 -->
             <div class="actions">
                 <button class="btn btn-sm btn-dark language-btn">
-                    <i class="fas fa-globe"></i> 中文
+                    <i class="fas fa-globe"></i> English
                 </button>
             </div>
         </div>
