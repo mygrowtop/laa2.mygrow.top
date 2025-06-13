@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Title - Game Center</title>
+    <meta name="description" content="Play this exciting game online for free. No downloads required, play directly in your browser!">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+    
+    <style>
+        /* Additional styles for game page */
+        .game-header {
+            margin-bottom: 1.5rem;
+        }
+        
+        .game-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .game-meta {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .game-description {
+            margin-top: 1.5rem;
+            line-height: 1.8;
+        }
+        
+        .game-controls {
+            background-color: #1e293b;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .control-item i {
+            width: 30px;
+            color: var(--primary-color);
+        }
+        
+        .related-games {
+            margin-top: 2rem;
+        }
+        
+        .btn-favorite {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            transition: var(--transition);
+        }
+        
+        .btn-favorite:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-favorite.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-fullscreen {
+            background-color: var(--dark-color);
+            color: white;
+            border: none;
+            transition: var(--transition);
+        }
+        
+        .btn-fullscreen:hover {
+            background-color: var(--primary-color);
+        }
+    </style>
+    
+    <script>
+        // 解析URL参数
+        function getUrlParams() {
+            const params = {};
+            const queryString = window.location.search.substring(1);
+            const urlParams = new URLSearchParams(queryString);
+            
+            // 从查询字符串获取参数
+            for (const [key, value] of urlParams.entries()) {
+                params[key] = value;
+            }
+            
+            // 从路径中获取参数 (伪静态URL)
+            const path = window.location.pathname;
+            const matches = path.match(/^\/games\/([^\/]+)\/([^\/]+)\.html$/);
+            if (matches) {
+                params.category = matches[1];
+                // 从文件名中提取游戏ID
+                const gameName = matches[2];
+                params.gameName = gameName;
+                
+                // 如果没有id参数，将gameName作为id
+                if (!params.id) {
+                    params.id = gameName;
+                }
+            }
+            
+            // 本地开发环境特殊处理
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                // 检查是否有重定向参数
+                if (params.redirect) {
+                    const redirectParts = params.redirect.split('/');
+                    if (redirectParts.length >= 3) {
+                        params.category = redirectParts[1];
+                        const gameNameWithExt = redirectParts[2];
+                        params.gameName = gameNameWithExt.replace('.html', '');
+                        
+                        // 如果没有id参数，将gameName作为id
+                        if (!params.id) {
+                            params.id = params.gameName;
+                        }
+                    }
+                }
+            }
+            
+            return params;
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('游戏页面加载完成');
+            console.log('当前URL:', window.location.href);
+            console.log('主机名:', window.location.hostname);
+            console.log('路径名:', window.location.pathname);
+            console.log('查询参数:', window.location.search);
+            
+            // 加载游戏数据
+            loadGameData();
+        });
+        
+        // 加载游戏数据
+        function loadGameData() {
+            // 获取URL参数
+            const params = getUrlParams();
+            const gameId = params.id;
+            const gameName = params.gameName;
+            const category = params.category;
+            
+            console.log('URL参数:', params);
+            console.log('游戏ID:', gameId);
+            console.log('游戏名称:', gameName);
+            console.log('分类:', category);
+            
+            // 如果没有游戏ID或名称，返回主页
+            if (!gameId && !gameName) {
+                window.location.href = './';
+                return;
+            }
+            
+            // 从games_data.json加载数据
+            fetch('games_data.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(games => {
+                    console.log('加载的游戏数据:', games.length);
+                    let game = null;
+                    
+                    // 根据ID查找游戏
+                    if (gameId) {
+                        console.log('尝试通过ID查找游戏:', gameId);
+                        
+                        // 检查是否是完整URL
+                        if (gameId.startsWith('http')) {
+                            game = games.find(g => {
+                                const match = g.url === gameId || g.embed_url === gameId;
+                                if (match) console.log('通过完整URL找到游戏:', g.name);
+                                return match;
+                            });
+                        }
+                        
+                        // 如果没找到，尝试通过ID或URL的最后部分查找
+                        if (!game) {
+                            const urlPart = gameId.split('/').pop();
+                            console.log('尝试通过URL的最后部分查找:', urlPart);
+                            
+                            game = games.find(g => {
+                                // 检查ID
+                                if (g.id === gameId) {
+                                    console.log('通过ID找到游戏:', g.name);
+                                    return true;
+                                }
+                                
+                                // 检查URL的最后部分
+                                if (g.url) {
+                                    const gameUrlPart = g.url.split('/').pop();
+                                    if (gameUrlPart === urlPart) {
+                                        console.log('通过URL的最后部分找到游戏:', g.name);
+                                        return true;
+                                    }
+                                }
+                                
+                                return false;
+                            });
+                        }
+                    }
+                    
+                    // 如果没有找到，尝试根据名称和分类查找
+                    if (!game && (gameName || gameId)) {
+                        console.log('尝试通过名称和分类查找游戏');
+                        const searchName = gameName || gameId;
+                        
+                        game = games.find(g => {
+                            // 创建游戏名称的slug
+                            const slug = g.name.toLowerCase()
+                                .replace(/[^\w\s-]/g, '')
+                                .replace(/\s+/g, '-')
+                                .replace(/-+/g, '-');
+                            
+                            // 创建URL中的slug
+                            const urlSlug = g.url ? g.url.split('/').pop() : '';
+                            
+                            // 检查各种可能的匹配
+                            const nameMatch = slug === searchName.toLowerCase();
+                            const categoryMatch = !category || g.category.toLowerCase() === category.toLowerCase();
+                            const urlMatch = urlSlug && urlSlug === searchName.toLowerCase();
+                            
+                            const match = (nameMatch || urlMatch) && categoryMatch;
+                            if (match) console.log('通过名称/URL找到游戏:', g.name);
+                            return match;
+                        });
+                    }
+                    
+                    // 如果仍然没有找到，尝试模糊匹配
+                    if (!game) {
+                        console.log('尝试模糊匹配');
+                        const searchTerm = gameName || gameId || '';
+                        
+                        // 尝试查找名称包含搜索词的游戏
+                        game = games.find(g => {
+                            const nameMatch = g.name.toLowerCase().includes(searchTerm.toLowerCase());
+                            const urlMatch = g.url && g.url.toLowerCase().includes(searchTerm.toLowerCase());
+                            const match = nameMatch || urlMatch;
+                            if (match) console.log('通过模糊匹配找到游戏:', g.name);
+                            return match;
+                        });
+                    }
+                    
+                    // 如果找到游戏，显示游戏内容
+                    if (game) {
+                        console.log('显示游戏:', game.name);
+                        displayGameContent(game);
+                        
+                        // 添加到最近游玩
+                        addToRecentlyPlayed(game);
+                        
+                        // 加载相关游戏
+                        loadRelatedGames(games, game);
+                    } else {
+                        // 如果找不到游戏，显示错误信息
+                        console.error('未找到游戏:', gameId || gameName);
+                        showError('游戏不存在或已被移除');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading game data:', error);
+                    showError('加载游戏数据失败，请稍后重试');
+                });
+        }
+        
+        // 显示游戏内容
+        function displayGameContent(game) {
+            // 设置页面标题
+            document.title = `${game.name} - Game Center`;
+            
+            // 设置游戏标题
+            const gameTitle = document.getElementById('gameTitle');
+            if (gameTitle) {
+                gameTitle.textContent = game.name;
+            }
+            
+            // 设置游戏分类
+            const gameCategory = document.getElementById('gameCategory');
+            if (gameCategory) {
+                gameCategory.textContent = game.category || 'Other';
+            }
+            
+            // 设置游戏描述
+            const gameDescription = document.getElementById('gameDescription');
+            if (gameDescription) {
+                gameDescription.textContent = game.description || '暂无游戏描述';
+            }
+            
+            // 设置游戏iframe
+            const gameFrame = document.getElementById('gameFrame');
+            if (gameFrame) {
+                if (game.embed_url) {
+                    gameFrame.src = game.embed_url;
+                } else if (game.url) {
+                    // 尝试构造嵌入URL
+                    if (game.url.includes('crazygames.com')) {
+                        const gameSlug = game.url.split('/').pop();
+                        gameFrame.src = `https://www.crazygames.com/embed/${gameSlug}`;
+                    } else {
+                        gameFrame.src = game.url;
+                    }
+                }
+            }
+            
+            // 检查游戏是否已收藏
+            const favoriteBtn = document.getElementById('favoriteBtn');
+            if (favoriteBtn) {
+                // 从本地存储获取收藏夹
+                let favorites = [];
+                try {
+                    const savedFavorites = localStorage.getItem('favorites');
+                    if (savedFavorites) {
+                        favorites = JSON.parse(savedFavorites);
+                    }
+                } catch (e) {
+                    console.error('Error parsing favorites:', e);
+                }
+                
+                // 检查游戏是否在收藏夹中
+                const gameId = game.id || game.url;
+                const isFavorite = favorites.includes(gameId);
+                
+                // 更新收藏按钮状态
+                if (isFavorite) {
+                    favoriteBtn.classList.add('active');
+                    favoriteBtn.querySelector('span').textContent = '从收藏中移除';
+                } else {
+                    favoriteBtn.classList.remove('active');
+                    favoriteBtn.querySelector('span').textContent = '添加到收藏';
+                }
+                
+                // 添加收藏按钮点击事件
+                favoriteBtn.addEventListener('click', function() {
+                    toggleFavorite(game);
+                });
+            }
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            const gameContainer = document.querySelector('.game-container');
+            if (!gameContainer) {
+                // 如果找不到游戏容器，创建一个
+                const mainContent = document.querySelector('.main-content');
+                if (mainContent) {
+                    const newContainer = document.createElement('div');
+                    newContainer.className = 'game-container';
+                    mainContent.appendChild(newContainer);
+                    showError(message); // 递归调用
+                    return;
+                }
+            }
+            
+            if (gameContainer) {
+                gameContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i> ${message}
+                    </div>
+                    <div class="error-options mt-4">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">返回首页</h5>
+                                        <p class="card-text">浏览所有可用的游戏</p>
+                                        <a href="./" class="btn btn-primary">返回首页</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">查看热门游戏</h5>
+                                        <p class="card-text">尝试我们最受欢迎的游戏</p>
+                                        <a href="./#popular" class="btn btn-success">热门游戏</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4" id="randomGamesContainer">
+                        <h3>您可能喜欢的游戏</h3>
+                        <div class="row" id="suggestedGames"></div>
+                    </div>
+                `;
+                
+                // 加载随机游戏推荐
+                loadRandomGames();
+            }
+        }
+        
+        // 加载随机游戏推荐
+        function loadRandomGames() {
+            fetch('games_data.json')
+                .then(response => response.json())
+                .then(games => {
+                    const randomGames = getRandomGames(games, 6);
+                    const container = document.getElementById('suggestedGames');
+                    if (container && randomGames.length > 0) {
+                        randomGames.forEach(game => {
+                            const card = createGameCard(game);
+                            container.appendChild(card);
+                        });
+                        
+                        // 添加点击事件
+                        addGameCardEvents(container);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading random games:', error);
+                });
+        }
+        
+        // 添加到最近游玩
+        function addToRecentlyPlayed(game) {
+            if (!game) return;
+            
+            // 确保游戏有ID
+            const gameId = game.id || game.url;
+            if (!gameId) return;
+            
+            // 从本地存储获取最近游玩
+            let recentlyPlayed = [];
+            try {
+                const savedRecentlyPlayed = localStorage.getItem('recentlyPlayed');
+                if (savedRecentlyPlayed) {
+                    recentlyPlayed = JSON.parse(savedRecentlyPlayed);
+                }
+            } catch (e) {
+                console.error('Error parsing recently played:', e);
+            }
+            
+            // 如果游戏已在列表中，先移除
+            const index = recentlyPlayed.indexOf(gameId);
+            if (index !== -1) {
+                recentlyPlayed.splice(index, 1);
+            }
+            
+            // 添加到列表开头
+            recentlyPlayed.unshift(gameId);
+            
+            // 限制列表长度为20
+            if (recentlyPlayed.length > 20) {
+                recentlyPlayed.pop();
+            }
+            
+            // 保存到本地存储
+            try {
+                localStorage.setItem('recentlyPlayed', JSON.stringify(recentlyPlayed));
+            } catch (e) {
+                console.error('Error saving recently played:', e);
+            }
+        }
+        
+        // 切换收藏状态
+        function toggleFavorite(game) {
+            if (!game) return;
+            
+            // 确保游戏有ID
+            const gameId = game.id || game.url;
+            if (!gameId) return;
+            
+            // 从本地存储获取收藏夹
+            let favorites = [];
+            try {
+                const savedFavorites = localStorage.getItem('favorites');
+                if (savedFavorites) {
+                    favorites = JSON.parse(savedFavorites);
+                }
+            } catch (e) {
+                console.error('Error parsing favorites:', e);
+            }
+            
+            // 获取收藏按钮
+            const favoriteBtn = document.getElementById('favoriteBtn');
+            
+            // 检查游戏是否已收藏
+            const index = favorites.indexOf(gameId);
+            
+            if (index !== -1) {
+                // 从收藏夹中移除
+                favorites.splice(index, 1);
+                
+                // 更新按钮状态
+                if (favoriteBtn) {
+                    favoriteBtn.classList.remove('active');
+                    favoriteBtn.querySelector('span').textContent = '添加到收藏';
+                }
+            } else {
+                // 添加到收藏夹
+                favorites.push(gameId);
+                
+                // 更新按钮状态
+                if (favoriteBtn) {
+                    favoriteBtn.classList.add('active');
+                    favoriteBtn.querySelector('span').textContent = '从收藏中移除';
+                }
+            }
+            
+            // 保存到本地存储
+            try {
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+            } catch (e) {
+                console.error('Error saving favorites:', e);
+            }
+        }
+        
+        // 加载相关游戏
+        function loadRelatedGames(allGames, currentGame) {
+            if (!allGames || !currentGame) return;
+            
+            // 获取相同分类的游戏
+            const relatedGames = allGames.filter(game => 
+                game.category === currentGame.category && 
+                game.id !== currentGame.id && 
+                game.url !== currentGame.url
+            );
+            
+            // 随机选择最多6个相关游戏
+            const selectedGames = getRandomGames(relatedGames, 6);
+            
+            // 获取相关游戏容器
+            const container = document.getElementById('relatedGamesContainer');
+            if (!container) return;
+            
+            // 清空容器
+            container.innerHTML = '';
+            
+            // 如果没有相关游戏，显示提示
+            if (!selectedGames || selectedGames.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center">没有相关游戏</div>';
+                return;
+            }
+            
+            // 创建游戏卡片
+            selectedGames.forEach(game => {
+                const card = createGameCard(game);
+                container.appendChild(card);
+            });
+            
+            // 添加点击事件
+            addGameCardEvents(container);
+        }
+        
+        // 获取随机游戏
+        function getRandomGames(games, count) {
+            if (!games || !Array.isArray(games) || games.length === 0) {
+                return [];
+            }
+            
+            if (games.length <= count) {
+                return [...games];
+            }
+            
+            const gamesCopy = [...games];
+            
+            for (let i = gamesCopy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [gamesCopy[i], gamesCopy[j]] = [gamesCopy[j], gamesCopy[i]];
+            }
+            
+            return gamesCopy.slice(0, count);
+        }
+        
+        // 创建游戏卡片
+        function createGameCard(game) {
+            if (!game) return document.createElement('div');
+            
+            const column = document.createElement('div');
+            column.className = 'col-6 col-md-4 col-lg-2 mb-4';
+            
+            const gameId = game.id || '';
+            const gameUrl = game.url || '#';
+            const gameName = game.name || '未知游戏';
+            const gameCover = game.cover || 'https://via.placeholder.com/300x200/cccccc/ffffff?text=游戏';
+            const gameCategory = game.category || '其他';
+            
+            column.innerHTML = `
+                <div class="game-card" data-id="${gameId}" data-url="${gameUrl}">
+                    <img src="${gameCover}" class="card-img-top" alt="${gameName}" 
+                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/cccccc/ffffff?text=加载失败';">
+                    <div class="card-body">
+                        <h5 class="card-title">${gameName}</h5>
+                    </div>
+                    <span class="category-badge">${gameCategory}</span>
+                </div>
+            `;
+            
+            return column;
+        }
+        
+        // 为游戏卡片添加点击事件
+        function addGameCardEvents(container) {
+            container.querySelectorAll('.game-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const gameId = this.getAttribute('data-id');
+                    const gameUrl = this.getAttribute('data-url');
+                    const gameCategory = this.querySelector('.category-badge').textContent.toLowerCase();
+                    const gameName = this.querySelector('.card-title').textContent.trim();
+                    
+                    if (!gameUrl) return;
+                    
+                    // 使用伪静态URL格式
+                    const slugName = gameName.toLowerCase()
+                        .replace(/[^\w\s-]/g, '') // 移除特殊字符
+                        .replace(/\s+/g, '-')     // 将空格替换为连字符
+                        .replace(/-+/g, '-');     // 移除多余的连字符
+                    
+                    // 本地开发环境特殊处理
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        // 在本地环境中，直接跳转到game.html，带上查询参数
+                        window.location.href = `game.html?id=${gameUrl}&category=${gameCategory}`;
+                    } else {
+                        // 在生产环境中，使用伪静态URL
+                        window.location.href = `games/${gameCategory}/${slugName}.html`;
+                    }
+                });
+            });
+        }
+    </script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="navbar-brand">
+            <i class="fas fa-gamepad"></i> Game Center
+        </div>
+        
+        <div class="nav flex-column">
+            <a class="nav-link" href="./" data-category="all" data-nav="home">
+                <i class="fas fa-home"></i>
+                <span data-i18n="home">Home</span>
+            </a>
+            <a class="nav-link" href="#" data-category="recently-played" data-nav="recently_played">
+                <i class="fas fa-history"></i>
+                <span data-i18n="recently_played">Recently Played</span>
+            </a>
+            <a class="nav-link" href="#" data-category="new-games" data-nav="new_games">
+                <i class="fas fa-star"></i>
+                <span data-i18n="new_games">New Games</span>
+            </a>
+            <a class="nav-link" href="#" data-category="trending" data-nav="trending">
+                <i class="fas fa-fire"></i>
+                <span data-i18n="trending">Trending</span>
+            </a>
+            
+            <div class="nav-link-header" data-i18n="game_categories">Game Categories</div>
+            
+            <a class="nav-link" href="#" data-category="action" data-nav="action">
+                <i class="fas fa-running"></i>
+                <span data-i18n="action">Action</span>
+            </a>
+            <a class="nav-link" href="#" data-category="adventure" data-nav="adventure">
+                <i class="fas fa-mountain"></i>
+                <span data-i18n="adventure">Adventure</span>
+            </a>
+            <a class="nav-link" href="#" data-category="arcade" data-nav="arcade">
+                <i class="fas fa-ghost"></i>
+                <span data-i18n="arcade">Arcade</span>
+            </a>
+            <a class="nav-link" href="#" data-category="puzzle" data-nav="puzzle">
+                <i class="fas fa-puzzle-piece"></i>
+                <span data-i18n="puzzle">Puzzle</span>
+            </a>
+            <a class="nav-link" href="#" data-category="racing" data-nav="racing">
+                <i class="fas fa-car"></i>
+                <span data-i18n="racing">Racing</span>
+            </a>
+            <a class="nav-link" href="#" data-category="sports" data-nav="sports">
+                <i class="fas fa-futbol"></i>
+                <span data-i18n="sports">Sports</span>
+            </a>
+            <a class="nav-link" href="#" data-category="shooting" data-nav="shooting">
+                <i class="fas fa-crosshairs"></i>
+                <span data-i18n="shooting">Shooting</span>
+            </a>
+            <a class="nav-link" href="#" data-category="strategy" data-nav="strategy">
+                <i class="fas fa-chess"></i>
+                <span data-i18n="strategy">Strategy</span>
+            </a>
+            <a class="nav-link" href="#" data-category="casual" data-nav="casual">
+                <i class="fas fa-smile"></i>
+                <span data-i18n="casual">Casual</span>
+            </a>
+            <a class="nav-link" href="#" data-category="card" data-nav="card">
+                <i class="fas fa-clone"></i>
+                <span data-i18n="card">Card</span>
+            </a>
+            <a class="nav-link" href="#" data-category="simulation" data-nav="simulation">
+                <i class="fas fa-plane"></i>
+                <span data-i18n="simulation">Simulation</span>
+            </a>
+            <a class="nav-link" href="#" data-category="io" data-nav="io_games">
+                <i class="fas fa-globe"></i>
+                <span data-i18n="io_games">IO Games</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <div class="content-wrapper">
+        <!-- Top Navigation Bar -->
+        <div class="category-tabs">
+            <div class="search-container">
+                <form class="search-form">
+                    <button type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <input type="text" placeholder="Search games...">
+                </form>
+            </div>
+            
+            <div class="actions">
+                <a href="./" class="btn btn-sm btn-dark me-2" data-i18n="back_to_games">
+                    <i class="fas fa-arrow-left"></i> Back to Games
+                </a>
+                <!-- 添加语言切换按钮 -->
+                <button class="btn btn-sm btn-dark language-btn">
+                    <i class="fas fa-globe"></i> 中文
+                </button>
+            </div>
+        </div>
+        
+        <!-- Game Content -->
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Game Frame -->
+                <div class="game-container">
+                    <div class="game-header">
+                        <h1 class="game-title" id="gameTitle">Loading Game...</h1>
+                        <div class="game-meta">
+                            <span class="category-badge" id="gameCategory">Category</span>
+                        </div>
+                    </div>
+                    
+                    <div class="game-frame-container">
+                        <iframe id="gameFrame" src="" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                    
+                    <div class="game-actions mt-3">
+                        <button class="btn btn-favorite" id="favoriteBtn">
+                            <i class="fas fa-heart"></i> <span>Add to Favorites</span>
+                        </button>
+                        <button class="btn btn-fullscreen" id="fullscreenBtn">
+                            <i class="fas fa-expand"></i> <span data-i18n="fullscreen">Fullscreen</span>
+                        </button>
+                    </div>
+                    
+                    <div class="game-description mt-4">
+                        <h3>Description</h3>
+                        <p id="gameDescription">Loading game description...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <!-- Game Controls -->
+                <div class="game-controls">
+                    <h3 data-i18n="how_to_play">How to Play</h3>
+                    <div class="control-item">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>Move Up / Jump</span>
+                    </div>
+                    <div class="control-item">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>Move Down / Duck</span>
+                    </div>
+                    <div class="control-item">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Move Left</span>
+                    </div>
+                    <div class="control-item">
+                        <i class="fas fa-arrow-right"></i>
+                        <span>Move Right</span>
+                    </div>
+                    <div class="control-item">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <span>Click to interact</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Related Games -->
+        <div class="related-games">
+            <h2 class="section-title" data-i18n="related_games">Related Games</h2>
+            <div class="row" id="relatedGamesContainer">
+                <!-- Related games will be loaded here -->
+                <div class="col-12">
+                    <div class="loader">
+                        <div class="loader-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-links">
+                        <a href="#" data-footer="about" data-i18n="about">About Us</a>
+                        <a href="#" data-footer="contact" data-i18n="contact">Contact</a>
+                        <a href="#" data-footer="privacy" data-i18n="privacy">Privacy Policy</a>
+                        <a href="#" data-footer="terms" data-i18n="terms">Terms of Service</a>
+                    </div>
+                </div>
+                <div class="footer-copyright text-center mt-3" data-i18n="copyright">
+                    © 2023 Game Center. All rights reserved.
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Mobile Menu Toggle Button -->
+    <button class="mobile-menu-toggle">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Scripts -->
+    <script src="js/i18n.js"></script>
+    
+    <script>
+        // 全屏功能
+        document.getElementById('fullscreenBtn').addEventListener('click', function() {
+            const gameFrame = document.getElementById('gameFrame');
+            if (gameFrame) {
+                if (gameFrame.requestFullscreen) {
+                    gameFrame.requestFullscreen();
+                } else if (gameFrame.mozRequestFullScreen) { // Firefox
+                    gameFrame.mozRequestFullScreen();
+                } else if (gameFrame.webkitRequestFullscreen) { // Chrome, Safari and Opera
+                    gameFrame.webkitRequestFullscreen();
+                } else if (gameFrame.msRequestFullscreen) { // IE/Edge
+                    gameFrame.msRequestFullscreen();
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

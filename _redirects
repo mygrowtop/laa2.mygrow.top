@@ -1,0 +1,6 @@
+# 游戏分类页面规则
+/games/category/:category.html /index.html?category=:category 200
+# 游戏详情页面规则
+/games/:category/:game.html /game.html?id=:game&category=:category 200
+# 404错误处理
+/* /index.html 200 

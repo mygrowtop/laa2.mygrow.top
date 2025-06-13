@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/img/*",
+    "/css/*",
+    "/js/*",
+    "/*.json"
+  ],
+  "routes": [
+    {
+      "src": "/games/category/([^/]+)\\.html",
+      "dest": "/index.html?category=$1"
+    },
+    {
+      "src": "/games/([^/]+)/([^/]+)\\.html",
+      "dest": "/game.html?id=$2&category=$1"
+    },
+    {
+      "src": "/(.*)",
+      "status": 404,
+      "dest": "/index.html"
+    }
+  ]
+} 

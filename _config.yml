@@ -1,0 +1,7 @@
+# Cloudflare Pages配置
+build:
+  command: ""
+  output_directory: "."
+
+# 404错误页面配置
+error_page: index.html 
